@@ -1,0 +1,169 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+      - '.gitignore'
+      - 'release/**'
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Yarn
+        run: npm install -g yarn
+
+      - name: Get current version
+        id: current_version
+        run: |
+          CURRENT_VERSION=$(node -p "require('./obsidian_paperlib/manifest.json').version")
+          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "Current version: $CURRENT_VERSION"
+
+      - name: Calculate next version
+        id: next_version
+        run: |
+          CURRENT="${{ steps.current_version.outputs.version }}"
+          IFS='.' read -ra VERSION_PARTS <<< "$CURRENT"
+          MAJOR="${VERSION_PARTS[0]}"
+          MINOR="${VERSION_PARTS[1]}"
+          PATCH="${VERSION_PARTS[2]}"
+          
+          # Increment patch version by 1
+          PATCH=$((PATCH + 1))
+          
+          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "Next version: $NEW_VERSION"
+
+      - name: Update version in manifest.json
+        run: |
+          NEW_VERSION="${{ steps.next_version.outputs.version }}"
+          node -e "
+          const fs = require('fs');
+          const manifest = JSON.parse(fs.readFileSync('./obsidian_paperlib/manifest.json', 'utf8'));
+          manifest.version = '$NEW_VERSION';
+          fs.writeFileSync('./obsidian_paperlib/manifest.json', JSON.stringify(manifest, null, '\t') + '\n');
+          "
+
+      - name: Update version in package.json
+        run: |
+          NEW_VERSION="${{ steps.next_version.outputs.version }}"
+          node -e "
+          const fs = require('fs');
+          const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
+          pkg.version = '$NEW_VERSION';
+          pkg.manifest_version = '$NEW_VERSION';
+          fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+
+      - name: Install dependencies for PaperLib extension
+        run: yarn install
+
+      - name: Build PaperLib extension
+        run: yarn build
+
+      - name: Install dependencies for Obsidian plugin
+        working-directory: ./obsidian_src
+        run: yarn install
+
+      - name: Build Obsidian plugin
+        working-directory: ./obsidian_src
+        run: yarn build
+
+      - name: Create release directory
+        run: mkdir -p release
+
+      - name: Package PaperLib extension
+        run: |
+          mkdir -p paperlib-extension-package
+          cp dist/main.js paperlib-extension-package/
+          cp src/main.ts paperlib-extension-package/
+          cp package.json paperlib-extension-package/
+          cp readme.md paperlib-extension-package/
+          cd paperlib-extension-package
+          zip -r ../release/paperlib-extension-package.zip .
+          cd ..
+          rm -rf paperlib-extension-package
+
+      - name: Package Obsidian plugin
+        run: |
+          cd obsidian_paperlib
+          zip -r ../release/obsidian-plugin-install.zip main.js manifest.json styles.css
+          cd ..
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -z "$PREV_TAG" ]; then
+            CHANGELOG=$(git log --pretty=format:"- %s" --no-merges | head -10)
+          else
+            CHANGELOG=$(git log ${PREV_TAG}..HEAD --pretty=format:"- %s" --no-merges)
+          fi
+          
+          # Escape special characters for GitHub Actions
+          CHANGELOG="${CHANGELOG//'%'/'%25'}"
+          CHANGELOG="${CHANGELOG//$'\n'/'%0A'}"
+          CHANGELOG="${CHANGELOG//$'\r'/'%0D'}"
+          
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Commit version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add obsidian_paperlib/manifest.json package.json
+          git commit -m "chore: bump version to ${{ steps.next_version.outputs.version }} [skip ci]" || echo "No changes to commit"
+          git push || echo "Nothing to push"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.next_version.outputs.version }}
+          name: v${{ steps.next_version.outputs.version }}
+          body: |
+            ## 🚀 Release v${{ steps.next_version.outputs.version }}
+            
+            ### 📦 Installation
+            
+            #### PaperLib Extension
+            1. Download `paperlib-extension-package.zip`
+            2. Extract and place in your PaperLib extensions folder
+            3. Restart PaperLib
+            
+            #### Obsidian Plugin
+            1. Download `obsidian-plugin-install.zip`
+            2. Extract to `.obsidian/plugins/paperlib-integration/` in your vault
+            3. Enable the plugin in Obsidian settings
+            
+            ### 📝 Changes
+            ${{ steps.changelog.outputs.changelog }}
+            
+            ### 🔗 Links
+            - [Documentation](https://github.com/${{ github.repository }})
+            - [Report Issues](https://github.com/${{ github.repository }}/issues)
+          files: |
+            release/paperlib-extension-package.zip
+            release/obsidian-plugin-install.zip
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

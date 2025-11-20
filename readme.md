@@ -26,6 +26,8 @@ A powerful integration between [PaperLib](https://paperlib.app/) and [Obsidian](
 
 ## 📦 Installation
 
+> **🤖 Automated Releases**: This repository uses GitHub Actions to automatically build and release new versions. Every push to the main branch creates a new release with updated packages. See [.github/WORKFLOWS_README.md](.github/WORKFLOWS_README.md) for details.
+
 ### Prerequisites
 - [PaperLib](https://paperlib.app/) installed
 - [Obsidian](https://obsidian.md/) installed
@@ -33,7 +35,7 @@ A powerful integration between [PaperLib](https://paperlib.app/) and [Obsidian](
 
 ### Quick Installation
 
-1. **Download the latest release** from the [Releases](https://github.com/Owais5514/paperlib-obsidian-plugin/releases) page
+1. **Download the latest release** from the [Releases](https://github.com/Owais5514/paperlib-obsidian-plugin/releases) page (automatically updated on each push)
 
 2. **Install PaperLib Extension:**
    - Extract `paperlib-extension-package.zip`
