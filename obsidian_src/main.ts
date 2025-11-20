@@ -358,9 +358,10 @@ export default class PaperlibIntegrationPlugin extends Plugin {
       content = content.replace(/{{doi}}/g, doi || '');
       content = content.replace(/{{abstract}}/g, abstract || '');
       content = content.replace(/{{comments}}/g, comments || '');
-      // For properties: use plain path without brackets (Obsidian will auto-link it)
-      content = content.replace(/{{pdfFilename}}/g, pdfLink.replace(/\[\[|\]\]/g, ''));
-      content = content.replace(/{{pdf}}/g, pdfLink);
+      // Wrap wikilink in double quotes to prevent YAML parser from adding extra quotes
+      const quotedPdfLink = pdfLink ? `"${pdfLink}"` : '';
+      content = content.replace(/{{pdfFilename}}/g, quotedPdfLink);
+      content = content.replace(/{{pdf}}/g, quotedPdfLink);
       content = content.replace(/{{url}}/g, url || '');
       content = content.replace(/{{tags}}/g, tags || '');
       
