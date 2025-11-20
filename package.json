@@ -1,11 +1,11 @@
 {
   "name": "paperlib-obsidian-integration",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "Yalyenea",
   "description": "Integrates PaperLib with Obsidian for academic paper note management.",
   "main": "dist/main.js",
   "type": "commonjs",
-  "manifest_version": "1.0.0",
+  "manifest_version": "1.1.0",
   "homepage": "https://github.com/Yalyenea/paperlib-obsidian-plugin",
   "scripts": {
     "prebuild": "tsc --noEmit",
