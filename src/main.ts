@@ -17,6 +17,27 @@ class PaperlibObsidianExtension extends PLExtension {
           description: "Enable Obsidian protocol integration",
           value: true,
           order: 0
+        },
+        obsidianVaultPath: {
+          type: "string",
+          name: "Obsidian Vault Path",
+          description: "Path to your Obsidian vault (e.g., /Users/username/Documents/MyVault)",
+          value: "",
+          order: 1
+        },
+        literatureNotesFolder: {
+          type: "string",
+          name: "Literature Notes Folder",
+          description: "Folder name for literature notes (e.g., Literature Notes)",
+          value: "Literature Notes",
+          order: 2
+        },
+        assetsFolder: {
+          type: "string",
+          name: "Assets Folder",
+          description: "Folder name for PDF assets (e.g., Assets)",
+          value: "Assets",
+          order: 3
         }
       },
     });
@@ -141,6 +162,22 @@ class PaperlibObsidianExtension extends PLExtension {
         return;
       }
 
+      // 获取配置的文件夹路径
+      const vaultPath = await PLExtAPI.extensionPreferenceService.get(
+        this.id,
+        "obsidianVaultPath"
+      ) as string;
+      
+      const literatureNotesFolder = await PLExtAPI.extensionPreferenceService.get(
+        this.id,
+        "literatureNotesFolder"
+      ) as string;
+      
+      const assetsFolder = await PLExtAPI.extensionPreferenceService.get(
+        this.id,
+        "assetsFolder"
+      ) as string;
+
       // 构造 URL 参数，确保所有值都是字符串类型
       const params = new URLSearchParams();
       // 将 ObjectId 转换为字符串
@@ -148,7 +185,43 @@ class PaperlibObsidianExtension extends PLExtension {
       params.append("title", paper.title || "");
       params.append("authors", paper.authors || "");
       params.append("year", paper.pubTime || "");
+      params.append("publicationDate", paper.pubTime || "");
       params.append("doi", paper.doi || "");
+      params.append("abstract", paper.note || "");
+      params.append("comments", "");
+      params.append("url", paper.arxiv || paper.doi ? `https://doi.org/${paper.doi}` : "");
+      params.append("tags", paper.tags?.map((tag: any) => tag.name).join(", ") || "");
+      
+      // 添加 PDF 路径信息 - 获取实际的文件路径
+      let pdfPath = "";
+      
+      if (paper.mainURL) {
+        // 获取文件服务来获取实际的文件路径
+        try {
+          const fileURL = await PLAPI.fileService.access(paper.mainURL, false);
+          pdfPath = fileURL || paper.mainURL;
+          
+          PLAPI.logService.info(
+            "Resolved PDF Path",
+            `Original: ${paper.mainURL}, Resolved: ${pdfPath}`,
+            true,
+            "ObsidianIntegration"
+          );
+        } catch (error) {
+          PLAPI.logService.warn(
+            "Failed to resolve PDF path, using mainURL directly",
+            (error as Error).message || String(error),
+            false,
+            "ObsidianIntegration"
+          );
+          pdfPath = paper.mainURL;
+        }
+      }
+      
+      params.append("pdfPath", pdfPath);
+      params.append("vaultPath", vaultPath);
+      params.append("literatureNotesFolder", literatureNotesFolder);
+      params.append("assetsFolder", assetsFolder);
 
       // 构造 obsidian:// URL，并将 + 替换为 %20
       const query = params.toString().replace(/\+/g, '%20');

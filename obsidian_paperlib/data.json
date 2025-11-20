@@ -1,0 +1,6 @@
+{
+  "paperNotesFolder": "Literature Notes",
+  "assetsFolder": "Assets",
+  "paperNoteTemplate": "---\npaper_id: {{id}}\ntitle: {{title}}\nauthors: {{authors}}\npublication_date: {{publicationDate}}\nabstract: {{abstract}}\ncomments: {{comments}}\npdf: {{pdfFilename}}\nurl: {{url}}\ntags: {{tags}}\n---\n\n# {{title}}\n\n## Summary\n\n## Notes\n\n",
+  "protocolHandlerEnabled": true
+}

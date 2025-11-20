@@ -15,9 +15,14 @@
     "node": ">=16.17.1"
   },
   "devDependencies": {
-    
+    "@rollup/plugin-commonjs": "^29.0.0",
+    "@types/node": "^24.10.1",
+    "paperlib-api": "^0.1.11",
+    "prettier-plugin-organize-imports": "^4.3.0",
+    "rollup-plugin-modify": "^3.0.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.2.2"
   },
-  
   "keywords": [
     "paperlib",
     "obsidian",

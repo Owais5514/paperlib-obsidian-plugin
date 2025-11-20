@@ -23,8 +23,12 @@ dist-ssr
 *.sln
 *.sw?
 
+# Release and build artifacts
 release
 .vscode/.debug.env
 mongodb-realm
-
 crypto
+
+# Generated packages (will be in releases)
+paperlib-extension-package/
+obsidian-plugin-install/
